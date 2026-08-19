@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simple YouTube link downloader for videos you have permission to save.">
+  <title>VideoDrop — YouTube Link Downloader</title>
+
+  <style>
+    :root{
+      --bg:#080a0f;
+      --surface:#111620;
+      --surface2:#171e2b;
+      --surface3:#0d121a;
+      --text:#f7f9fc;
+      --muted:#9ca7b6;
+      --line:rgba(255,255,255,.09);
+      --red:#ff3658;
+      --red2:#ff715e;
+      --green:#55d99d;
+      --yellow:#ffcb70;
+      --danger:#ff899a;
+      --shadow:0 28px 90px rgba(0,0,0,.42);
+      --radius:22px;
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 12% 0%,rgba(255,54,88,.16),transparent 29%),
+        radial-gradient(circle at 88% 0%,rgba(111,88,255,.12),transparent 30%),
+        var(--bg);
+      color:var(--text);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+
+    input,button{font:inherit}
+
+    .wrap{
+      width:min(1120px,calc(100% - 30px));
+      margin:auto;
+    }
+
+    nav{
+      height:74px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:900;
+      letter-spacing:-.035em;
+      font-size:1.1rem;
+    }
+
+    .logo{
+      width:38px;height:38px;
+      display:grid;
+      place-items:center;
+      border-radius:12px;
+      background:linear-gradient(135deg,var(--red),var(--red2));
+      box-shadow:0 12px 30px rgba(255,54,88,.25);
+    }
+
+    .mini-credit{
+      display:flex;
+      align-items:center;
+      gap:9px;
+      color:var(--muted);
+      font-size:.82rem;
+    }
+
+    .mini-credit img{
+      width:34px;height:34px;
+      object-fit:cover;
+      border-radius:50%;
+      border:1px solid var(--line);
+    }
+
+    main{padding:64px 0 70px}
+    .hero{text-align:center}
+
+    .eyebrow{
+      display:inline-flex;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,54,88,.24);
+      background:rgba(255,54,88,.08);
+      color:#ff9bae;
+      font-size:.82rem;
+      font-weight:850;
+      margin-bottom:20px;
+    }
+
+    h1{
+      max-width:880px;
+      margin:0 auto;
+      font-size:clamp(2.45rem,7vw,5.7rem);
+      line-height:.96;
+      letter-spacing:-.065em;
+    }
+
+    .lead{
+      max-width:670px;
+      margin:22px auto 0;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:1.02rem;
+    }
+
+    .app{
+      max-width:930px;
+      margin:40px auto 0;
+      padding:21px;
+      border:1px solid var(--line);
+      background:rgba(17,22,32,.88);
+      backdrop-filter:blur(18px);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      text-align:left;
+    }
+
+    .url-row{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+    }
+
+    .url{
+      width:100%;
+      min-height:60px;
+      padding:0 18px;
+      border:1px solid var(--line);
+      background:var(--surface3);
+      color:white;
+      border-radius:15px;
+      outline:none;
+    }
+
+    .url:focus{
+      border-color:rgba(255,54,88,.6);
+      box-shadow:0 0 0 4px rgba(255,54,88,.08);
+    }
+
+    .primary,.download-btn,.mp3-btn{
+      border:0;
+      color:white;
+      cursor:pointer;
+      font-weight:900;
+      transition:.18s ease;
+    }
+
+    .primary{
+      min-height:60px;
+      padding:0 24px;
+      border-radius:15px;
+      background:linear-gradient(135deg,var(--red),var(--red2));
+      box-shadow:0 12px 30px rgba(255,54,88,.22);
+    }
+
+    button:hover:not(:disabled){transform:translateY(-1px)}
+    button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+
+    .permission{
+      display:flex;
+      gap:9px;
+      align-items:flex-start;
+      margin-top:12px;
+      color:var(--muted);
+      font-size:.82rem;
+      line-height:1.5;
+    }
+
+    .permission input{margin-top:3px;accent-color:var(--red)}
+
+    .status{
+      min-height:22px;
+      margin-top:13px;
+      color:var(--muted);
+      font-size:.88rem;
+      line-height:1.5;
+    }
+
+    .result{
+      display:none;
+      margin-top:20px;
+      padding-top:20px;
+      border-top:1px solid var(--line);
+    }
+
+    .video-card{
+      display:grid;
+      grid-template-columns:220px 1fr;
+      gap:18px;
+      align-items:center;
+    }
+
+    .thumb{
+      width:100%;
+      aspect-ratio:16/9;
+      object-fit:cover;
+      border-radius:15px;
+      background:var(--surface3);
+      border:1px solid var(--line);
+    }
+
+    .title{
+      font-weight:900;
+      font-size:1.12rem;
+      line-height:1.4;
+    }
+
+    .meta{
+      color:var(--muted);
+      font-size:.88rem;
+      margin-top:8px;
+      line-height:1.55;
+    }
+
+    .quick{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:15px;
+    }
+
+    .mp3-btn{
+      background:#222a38;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 14px;
+    }
+
+    .formats-head{
+      margin:22px 0 10px;
+      display:flex;
+      align-items:end;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .formats-head strong{font-size:.98rem}
+    .formats-head span{color:var(--muted);font-size:.78rem}
+
+    .formats{
+      display:grid;
+      gap:9px;
+      max-height:560px;
+      overflow:auto;
+      padding-right:3px;
+    }
+
+    .format{
+      display:grid;
+      grid-template-columns:1fr .9fr .9fr .8fr auto;
+      align-items:center;
+      gap:10px;
+      padding:12px 13px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:var(--surface2);
+    }
+
+    .tag{
+      width:max-content;
+      max-width:100%;
+      padding:6px 9px;
+      border-radius:999px;
+      background:rgba(85,217,157,.10);
+      color:#8be8ba;
+      font-size:.75rem;
+      font-weight:850;
+    }
+
+    .small{
+      color:var(--muted);
+      font-size:.82rem;
+    }
+
+    .download-btn{
+      padding:10px 13px;
+      border-radius:11px;
+      background:#252e3e;
+      border:1px solid var(--line);
+    }
+
+    .download-progress{
+      display:none;
+      margin-top:16px;
+      padding:13px 14px;
+      border-radius:14px;
+      background:#0d121a;
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:.84rem;
+    }
+
+    .pulse{
+      display:inline-block;
+      width:8px;height:8px;
+      border-radius:50%;
+      background:var(--green);
+      margin-right:8px;
+      animation:pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse{to{opacity:.3}}
+
+    .developer{
+      max-width:930px;
+      margin:45px auto 0;
+      padding:22px;
+      display:grid;
+      grid-template-columns:150px 1fr;
+      gap:20px;
+      align-items:center;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:rgba(255,255,255,.025);
+    }
+
+    .developer img{
+      width:150px;height:180px;
+      object-fit:cover;
+      object-position:center 23%;
+      border-radius:16px;
+      border:1px solid var(--line);
+    }
+
+    .dev-badge{
+      display:inline-block;
+      padding:6px 9px;
+      border-radius:999px;
+      background:rgba(255,54,88,.08);
+      color:#ff9bae;
+      font-weight:850;
+      font-size:.76rem;
+      margin-bottom:9px;
+    }
+
+    .developer h2{margin:0;font-size:1.7rem;letter-spacing:-.035em}
+    .developer p{margin:8px 0 0;color:var(--muted);line-height:1.6}
+
+    footer{
+      border-top:1px solid var(--line);
+      padding:27px 0 42px;
+      text-align:center;
+      color:var(--muted);
+      font-size:.8rem;
+      line-height:1.6;
+    }
+
+    @media(max-width:760px){
+      main{padding-top:40px}
+      .mini-credit span{display:none}
+      .url-row{grid-template-columns:1fr}
+      .video-card{grid-template-columns:1fr}
+      .format{grid-template-columns:1fr 1fr}
+      .format .download-btn{grid-column:1/-1}
+      .developer{grid-template-columns:1fr;text-align:center}
+      .developer img{margin:auto}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <div class="brand">
+        <div class="logo">▶</div>
+        VideoDrop
+      </div>
+      <div class="mini-credit">
+        <span>Developed by Ashikul Islam Abir</span>
+        <img src="/static/developer.jpg" alt="Ashikul Islam Abir">
+      </div>
+    </nav>
+
+    <main>
+      <section class="hero">
+        <div class="eyebrow">YouTube link → available formats</div>
+        <h1>Paste a YouTube link. Pick a format. Download.</h1>
+        <p class="lead">
+          Enter a YouTube video URL to check the formats currently available for that video.
+        </p>
+      </section>
+
+      <section class="app">
+        <div class="url-row">
+          <input
+            class="url"
+            id="url"
+            type="url"
+            placeholder="https://www.youtube.com/watch?v=..."
+            autocomplete="off">
+          <button id="analyze" class="primary">Get Formats</button>
+        </div>
+
+        <label class="permission">
+          <input type="checkbox" id="permission">
+          <span>I confirm I own this video or have permission/right to save a copy.</span>
+        </label>
+
+        <div id="status" class="status"></div>
+
+        <section id="result" class="result">
+          <div class="video-card">
+            <img id="thumb" class="thumb" alt="Video thumbnail">
+            <div>
+              <div id="title" class="title"></div>
+              <div id="meta" class="meta"></div>
+
+              <div class="quick">
+                <button id="mp3Btn" class="mp3-btn">Download MP3 • 192 kbps</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="formats-head">
+            <strong>Available formats</strong>
+            <span>Video-only formats are merged with audio when needed.</span>
+          </div>
+
+          <div id="formats" class="formats"></div>
+
+          <div id="downloadProgress" class="download-progress">
+            <span class="pulse"></span>
+            <span id="downloadText">Preparing download on the server…</span>
+          </div>
+        </section>
+      </section>
+
+      <section class="developer">
+        <img src="/static/developer.jpg" alt="Ashikul Islam Abir">
+        <div>
+          <div class="dev-badge">Developer Credit</div>
+          <h2>Ashikul Islam Abir</h2>
+          <p>Developer of VideoDrop.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    VideoDrop • Developed by Ashikul Islam Abir
+  </footer>
+
+  <script>
+    const urlInput = document.getElementById("url");
+    const permission = document.getElementById("permission");
+    const analyzeBtn = document.getElementById("analyze");
+    const statusEl = document.getElementById("status");
+    const resultEl = document.getElementById("result");
+    const thumbEl = document.getElementById("thumb");
+    const titleEl = document.getElementById("title");
+    const metaEl = document.getElementById("meta");
+    const formatsEl = document.getElementById("formats");
+    const mp3Btn = document.getElementById("mp3Btn");
+    const downloadProgress = document.getElementById("downloadProgress");
+    const downloadText = document.getElementById("downloadText");
+
+    let currentUrl = "";
+
+    function setStatus(text, kind="normal"){
+      statusEl.textContent = text;
+      statusEl.style.color =
+        kind === "bad" ? "var(--danger)" :
+        kind === "ok" ? "var(--green)" :
+        kind === "warn" ? "var(--yellow)" :
+        "var(--muted)";
+    }
+
+    function humanSize(bytes){
+      if(!bytes) return "Size unknown";
+      const units=["B","KB","MB","GB"];
+      let n=bytes, i=0;
+      while(n>=1024 && i<units.length-1){n/=1024;i++}
+      return `${n.toFixed(i ? 1 : 0)} ${units[i]}`;
+    }
+
+    function durationText(seconds){
+      if(!seconds) return "";
+      const h=Math.floor(seconds/3600);
+      const m=Math.floor((seconds%3600)/60);
+      const s=Math.floor(seconds%60);
+      return h ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`
+               : `${m}:${String(s).padStart(2,"0")}`;
+    }
+
+    analyzeBtn.addEventListener("click", analyze);
+    urlInput.addEventListener("keydown", e => {
+      if(e.key === "Enter") analyze();
+    });
+
+    async function analyze(){
+      const url=urlInput.value.trim();
+
+      if(!url){
+        setStatus("Paste a YouTube video link first.", "bad");
+        return;
+      }
+
+      if(!permission.checked){
+        setStatus("Please confirm that you have permission to save the video.", "warn");
+        return;
+      }
+
+      analyzeBtn.disabled=true;
+      resultEl.style.display="none";
+      setStatus("Checking the YouTube video and available formats…");
+
+      try{
+        const res=await fetch("/api/info",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({url,permission:true})
+        });
+
+        const data=await res.json();
+        if(!res.ok) throw new Error(data.error || "Could not analyze this video.");
+
+        currentUrl=url;
+        titleEl.textContent=data.title;
+        thumbEl.src=data.thumbnail || "";
+        metaEl.textContent=[
+          data.channel,
+          durationText(data.duration),
+          `${data.formats.length} format options`
+        ].filter(Boolean).join(" • ");
+
+        renderFormats(data.formats);
+        resultEl.style.display="block";
+        setStatus("Formats loaded.", "ok");
+      }catch(err){
+        setStatus(err.message || "Could not analyze this link.", "bad");
+      }finally{
+        analyzeBtn.disabled=false;
+      }
+    }
+
+    function renderFormats(formats){
+      formatsEl.innerHTML="";
+
+      formats.forEach(fmt=>{
+        const row=document.createElement("div");
+        row.className="format";
+
+        const extra = [
+          fmt.fps ? `${Math.round(fmt.fps)} fps` : "",
+          fmt.needs_merge ? "Audio merged" : ""
+        ].filter(Boolean).join(" • ");
+
+        row.innerHTML=`
+          <div>
+            <span class="tag">${escapeHtml(fmt.ext.toUpperCase())}</span>
+          </div>
+          <div>
+            <strong>${escapeHtml(fmt.resolution)}</strong>
+            <div class="small">${escapeHtml(extra)}</div>
+          </div>
+          <div class="small">${escapeHtml(fmt.kind)}</div>
+          <div class="small">${escapeHtml(humanSize(fmt.filesize))}</div>
+          <button class="download-btn">Download</button>
+        `;
+
+        row.querySelector("button").addEventListener("click",()=>{
+          downloadFormat(fmt.id, `${fmt.ext.toUpperCase()} ${fmt.resolution}`);
+        });
+
+        formatsEl.appendChild(row);
+      });
+    }
+
+    mp3Btn.addEventListener("click",()=>{
+      startDownload({mode:"mp3"}, "MP3 192 kbps");
+    });
+
+    function downloadFormat(formatId,label){
+      startDownload({mode:"format",format_id:formatId},label);
+    }
+
+    async function startDownload(extra,label){
+      if(!currentUrl) return;
+
+      downloadProgress.style.display="block";
+      downloadText.textContent=`Preparing ${label}… this may take a moment.`;
+
+      try{
+        const res=await fetch("/api/download",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            url:currentUrl,
+            permission:true,
+            ...extra
+          })
+        });
+
+        if(!res.ok){
+          let message="Download failed.";
+          try{
+            const data=await res.json();
+            message=data.error || message;
+          }catch{}
+          throw new Error(message);
+        }
+
+        const blob=await res.blob();
+        const cd=res.headers.get("content-disposition") || "";
+        let filename="video-download";
+        const utf=cd.match(/filename\*=UTF-8''([^;]+)/i);
+        const normal=cd.match(/filename="?([^"]+)"?/i);
+
+        if(utf){
+          filename=decodeURIComponent(utf[1]);
+        }else if(normal){
+          filename=normal[1];
+        }
+
+        const objectUrl=URL.createObjectURL(blob);
+        const a=document.createElement("a");
+        a.href=objectUrl;
+        a.download=filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(objectUrl),3000);
+
+        downloadText.textContent=`${label} download started.`;
+        setStatus("Your file is ready.", "ok");
+      }catch(err){
+        downloadText.textContent="Download failed.";
+        setStatus(err.message || "Download failed.", "bad");
+      }
+    }
+
+    function escapeHtml(value){
+      return String(value ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+  </script>
+</body>
+</html>
