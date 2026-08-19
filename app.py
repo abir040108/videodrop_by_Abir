@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
-from flask import Flask, after_this_request, jsonify, render_template, request, send_file
+from flask import Flask, jsonify, render_template, request, send_file
 import yt_dlp
 
 
@@ -23,6 +23,18 @@ YOUTUBE_HOSTS = {
     "m.youtube.com",
     "music.youtube.com",
     "youtu.be",
+}
+
+# YouTube frequently tightens bot-detection on the default "web" client,
+# which is the #1 cause of yt-dlp suddenly returning empty formats or
+# "Sign in to confirm you're not a bot". Falling back across several
+# player clients makes extraction far more resilient without needing
+# cookies. This, plus keeping yt-dlp itself updated (see Dockerfile),
+# is what keeps this working over time.
+YOUTUBE_EXTRACTOR_ARGS = {
+    "youtube": {
+        "player_client": ["android", "ios", "web_safari", "web"],
+    }
 }
 
 
@@ -45,13 +57,9 @@ def base_ydl_options() -> dict:
         "skip_download": True,
         "cachedir": False,
         "socket_timeout": 20,
-        # Use the local BgUtils PO-token provider. This helps yt-dlp
-        # satisfy YouTube's current proof-of-origin checks.
-        "extractor_args": {
-            "youtubepot-bgutilhttp": {
-                "base_url": "http://127.0.0.1:4416"
-            }
-        },
+        "extractor_retries": 3,
+        "fragment_retries": 3,
+        "extractor_args": YOUTUBE_EXTRACTOR_ARGS,
     }
 
 
@@ -225,11 +233,6 @@ def index():
     return render_template("index.html")
 
 
-@app.get("/health")
-def health():
-    return jsonify({"status": "ok"}), 200
-
-
 @app.post("/api/info")
 def api_info():
     data = request.get_json(silent=True) or {}
@@ -286,12 +289,8 @@ def api_download():
 
     temp_dir = Path(tempfile.mkdtemp(prefix="videodrop_"))
 
-    @after_this_request
-    def cleanup(response):
-        try:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        finally:
-            return response
+    def cleanup():
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
     try:
         info = extract_video_info(url)
@@ -302,11 +301,9 @@ def api_download():
             "noplaylist": True,
             "cachedir": False,
             "socket_timeout": 20,
-            "extractor_args": {
-                "youtubepot-bgutilhttp": {
-                    "base_url": "http://127.0.0.1:4416"
-                }
-            },
+            "extractor_retries": 3,
+            "fragment_retries": 3,
+            "extractor_args": YOUTUBE_EXTRACTOR_ARGS,
             "paths": {"home": str(temp_dir)},
             "outtmpl": {
                 "default": str(temp_dir / "%(title).120B [%(id)s].%(ext)s")
@@ -339,22 +336,29 @@ def api_download():
 
         output = newest_media_file(temp_dir)
         if not output or not output.exists():
+            cleanup()
             return jsonify({"error": "The download finished, but the output file could not be found."}), 500
 
-        return send_file(
+        response = send_file(
             output,
             as_attachment=True,
             download_name=output.name,
             conditional=True,
             max_age=0,
         )
+        # Only delete the temp file after the response body has actually
+        # been fully sent to the client, not just after this view returns.
+        response.call_on_close(cleanup)
+        return response
 
     except yt_dlp.utils.DownloadError as exc:
+        cleanup()
         return jsonify({"error": f"Download failed: {str(exc)}"}), 400
     except Exception as exc:
+        cleanup()
         return jsonify({"error": f"Download failed: {str(exc)}"}), 500
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "10000"))
+    port = int(os.getenv("PORT", "5000"))
     app.run(host="0.0.0.0", port=port, debug=os.getenv("FLASK_DEBUG") == "1")
