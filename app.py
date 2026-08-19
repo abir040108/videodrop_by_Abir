@@ -45,6 +45,13 @@ def base_ydl_options() -> dict:
         "skip_download": True,
         "cachedir": False,
         "socket_timeout": 20,
+        # Use the local BgUtils PO-token provider. This helps yt-dlp
+        # satisfy YouTube's current proof-of-origin checks.
+        "extractor_args": {
+            "youtubepot-bgutilhttp": {
+                "base_url": "http://127.0.0.1:4416"
+            }
+        },
     }
 
 
@@ -290,6 +297,11 @@ def api_download():
             "noplaylist": True,
             "cachedir": False,
             "socket_timeout": 20,
+            "extractor_args": {
+                "youtubepot-bgutilhttp": {
+                    "base_url": "http://127.0.0.1:4416"
+                }
+            },
             "paths": {"home": str(temp_dir)},
             "outtmpl": {
                 "default": str(temp_dir / "%(title).120B [%(id)s].%(ext)s")
