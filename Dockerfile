@@ -23,8 +23,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV PORT=5000
-EXPOSE 5000
+ENV PORT=10000
+EXPOSE 10000
 
 # Start the local PO-token provider, then the Flask app.
 CMD ["sh", "-c", "node /opt/bgutil-ytdlp-pot-provider/server/build/main.js & exec gunicorn --workers 2 --threads 4 --timeout 300 --bind 0.0.0.0:${PORT} app:app"]
