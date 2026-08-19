@@ -225,6 +225,11 @@ def index():
     return render_template("index.html")
 
 
+@app.get("/health")
+def health():
+    return jsonify({"status": "ok"}), 200
+
+
 @app.post("/api/info")
 def api_info():
     data = request.get_json(silent=True) or {}
@@ -351,5 +356,5 @@ def api_download():
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "5000"))
+    port = int(os.getenv("PORT", "10000"))
     app.run(host="0.0.0.0", port=port, debug=os.getenv("FLASK_DEBUG") == "1")
